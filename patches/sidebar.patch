@@ -1,0 +1,86 @@
+--- a/Sidebar.qml
++++ b/Sidebar.qml
+@@ -10,6 +10,7 @@
+ import "minimap" as Minimap
+ import "notifications" as Notifications
+ import "installs" as Installs
++import "airpods" as AirPods
+ import Pond.Screenshot as Screenshot
+ 
+ PanelWindow {
+@@ -23,10 +24,11 @@
+   readonly property real notificationCardCenterY: mainStack.y + notificationCard.y + 24
+ 
+   readonly property real panelX: Theme.sidebarOuterMargin + cardWidth + Theme.sidebarCardGap
+-  readonly property bool panelOpen: wifiPanel.opened || audioPanel.opened || bluetoothPanel.opened
+-  readonly property var activePanel: wifiPanel.opened ? wifiPanel : audioPanel.opened ? audioPanel : bluetoothPanel.opened ? bluetoothPanel : null
++  readonly property bool panelOpen: wifiPanel.opened || audioPanel.opened || bluetoothPanel.opened || airpodsPanel.opened
++  readonly property var activePanel: wifiPanel.opened ? wifiPanel : audioPanel.opened ? audioPanel
++      : bluetoothPanel.opened ? bluetoothPanel : airpodsPanel.opened ? airpodsPanel : null
+   property string pendingPanel: ""
+-  readonly property var panels: ({wifi: wifiPanel, audio: audioPanel, bluetooth: bluetoothPanel})
++  readonly property var panels: ({wifi: wifiPanel, audio: audioPanel, bluetooth: bluetoothPanel, airpods: airpodsPanel})
+ 
+   function dismissPanels() {
+     panelSwitchDelay.stop();
+@@ -100,14 +102,15 @@
+   Region {
+     id: cardBlur
+     regions: [timeCard.blurRegion, workspacesCard.blurRegion, mediaCard.blurRegion,
+-      notificationCard.blurRegion, installsCard.blurRegion, controls.blurRegion,
+-      wifiPanel.blurRegion, audioPanel.blurRegion, bluetoothPanel.blurRegion]
++      notificationCard.blurRegion, installsCard.blurRegion, airpodsCard.blurRegion, controls.blurRegion,
++      wifiPanel.blurRegion, audioPanel.blurRegion, bluetoothPanel.blurRegion, airpodsPanel.blurRegion]
+   }
+   // Keep compositor resizes out of the card animation; only the input area shrinks.
+   implicitWidth: Math.ceil(Math.max(Theme.sidebarOuterMargin + Theme.sidebarCardExpandedWidth + Theme.sidebarFadeWidth,
+       wifiPanel.visible ? panelX + wifiPanel.width + 67 : 0,
+       audioPanel.visible ? panelX + audioPanel.width + 67 : 0,
+-      bluetoothPanel.visible ? panelX + bluetoothPanel.width + 67 : 0))
++      bluetoothPanel.visible ? panelX + bluetoothPanel.width + 67 : 0,
++      airpodsPanel.visible ? panelX + airpodsPanel.width + 67 : 0))
+   mask: Region {
+     width: root.panelOpen ? root.implicitWidth : Math.ceil(Theme.sidebarOuterMargin + Math.max(root.cardWidth,
+         workspacesCard.width, mediaCard.width, controls.width) + 8)
+@@ -159,8 +162,10 @@
+       maximumHeight: Math.max(64,
+           bottomStack.y - Theme.sidebarCardGap - mainStack.y
+           - timeCard.height - mediaCard.height - notificationCard.height - installsCard.height
++          - airpodsCard.height
+           - (keyboardFeedback.visible ? keyboardFeedback.height + Theme.sidebarCardGap : 0)
+-          - Theme.sidebarCardGap * (2 + (mediaCard.visible ? 1 : 0) + (installsCard.visible ? 1 : 0)))
++          - Theme.sidebarCardGap * (2 + (mediaCard.visible ? 1 : 0) + (installsCard.visible ? 1 : 0)
++              + (airpodsCard.visible ? 1 : 0)))
+       onFocusRequested: index => NiriMsg.focusWorkspace(index)
+       onWindowRequested: windowId => NiriMsg.focusWindow(windowId)
+       onAddRequested: workspaceId => NiriMsg.openLauncher(workspaceId)
+@@ -183,6 +188,12 @@
+       width: root.cardWidth
+       collapseProgress: root.collapseProgress
+     }
++    AirPods.Widget {
++      id: airpodsCard
++      width: root.cardWidth
++      collapseProgress: root.collapseProgress
++      onClicked: root.togglePanel("airpods")
++    }
+     KeyboardFeedback {
+       id: keyboardFeedback
+       screen: root.screen
+@@ -231,6 +242,16 @@
+     anchors.bottomMargin: Theme.sidebarOuterMargin
+   }
+ 
++  AirPods.Panel {
++    id: airpodsPanel
++    x: root.panelX
++    // The panel's card sits 22px below its own top, so line that up with the sidebar card,
++    // and keep the whole panel on screen.
++    y: Math.max(Theme.sidebarOuterMargin, Math.min(mainStack.y + airpodsCard.y - 22,
++        root.height - height - Theme.sidebarOuterMargin))
++    z: 80
++  }
++
+   Column {
+     id: bottomStack
+     onYChanged: cardBlur.changed()
