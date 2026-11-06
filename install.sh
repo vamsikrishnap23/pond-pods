@@ -10,7 +10,7 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")" && pwd)
-stock=/usr/share/pond-interface/shell
+stock=${POND_SHELL_STOCK:-/usr/share/pond-interface/shell}
 fork=${POND_SHELL_FORK:-$HOME/.config/quickshell/pond-shell}
 deps=(cmake ninja qt6-connectivity qt6-tools qt6-declarative pkgconf libpulse)
 
@@ -50,7 +50,9 @@ install_shell() {
   if [ ! -d "$fork" ]; then
     mkdir -p "$(dirname "$fork")"
     cp -rL "$stock" "$fork"
-    patch -p1 -d "$fork" < "$root/patches/sidebar.patch"
+    patch --no-backup-if-mismatch -p1 -d "$fork" < "$root/patches/sidebar.patch"
+    # Which pond-shell the copy was made from, so ./update.sh can tell when it falls behind.
+    printf '%s\n' "${POND_SHELL_VERSION:-$(pacman -Q pond-shell 2>/dev/null | awk '{print $2}')}" > "$fork/.pond-pods-base"
   elif grep -q 'import "airpods" as AirPods' "$fork/Sidebar.qml" 2>/dev/null; then
     echo "$fork already has the Sidebar patch, updating airpods/ only."
   else
@@ -63,8 +65,9 @@ install_shell() {
   cp -r "$root/airpods" "$fork/airpods"
   echo "Installed the widget into $fork"
   echo
-  echo "This copy now takes the place of $stock, so pond-shell package updates no longer reach you"
-  echo "until you run ./uninstall.sh."
+  echo "This copy now takes the place of $stock, so pond-shell package updates do not reach it."
+  echo "After a pond-shell update run ./update.sh --check, and ./update.sh to rebuild the copy."
+  echo "./uninstall.sh goes back to the stock shell."
   echo
   echo "To load it, restart the shell (the lock screen is left alone):"
   echo "  pkill -f '^qs -c pond-shell'; setsid qs -c pond-shell -d >/dev/null 2>&1 &"

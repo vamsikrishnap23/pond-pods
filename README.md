@@ -48,8 +48,26 @@ Nothing under `/usr` or `/etc`. The script:
 The patch is the only edit to a stock file. It adds 21 lines and rewrites 7 so the flyout opens and closes like the
 wifi, audio and bluetooth ones.
 
-Because the copy takes the place of the system shell, **`pond-shell` package updates no longer reach you** while it
-is installed.
+Because the copy takes the place of the system shell, **`pond-shell` package updates do not reach it** while it is
+installed. See [Keeping up with Pond updates](#keeping-up-with-pond-updates).
+
+## Keeping up with Pond updates
+
+`install.sh` records which `pond-shell` version the copy was made from. After Pond updates the package:
+
+```
+./update.sh --check     # is the stock shell different from my copy? (exit 0 up to date, 10 behind)
+./update.sh             # rebuild the copy: fresh stock files + patches/sidebar.patch + airpods/
+./update.sh --restart   # the same, and restart the shell
+```
+
+The copy is rebuilt beside the old one and swapped in only when it is complete. The previous copy is kept as
+`pond-shell.old.<time>`, and the copy's own git history (if it has one) is carried over, so `git status` there shows
+what Pond changed. If Pond has changed the lines of `Sidebar.qml` that the patch edits, the patch no longer applies
+and `update.sh` stops without touching anything. `patches/sidebar.patch` then has to be updated first.
+
+The shell does not notice updates by itself, so run `./update.sh --check` after a `pond-shell` upgrade, or when the
+sidebar looks wrong after one.
 
 ## Restore the stock shell
 
