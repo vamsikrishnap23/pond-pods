@@ -2,6 +2,14 @@
 
 AirPods battery and controls in the Pond OS sidebar.
 
+## Screenshots
+
+| In the sidebar | The card | The flyout | Collapsed sidebar |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/sidebar.png" alt="The Pond sidebar with the AirPods card at the bottom of the stack, showing AirPods Pro 2 with 30% in the left pod, 35% in the right pod and 97% in the charging case"> | <img src="docs/screenshots/card.png" alt="The AirPods card: a battery ring for the left pod, the right pod and the case, each with its icon inside and the percentage below"> | <img src="docs/screenshots/flyout.png" alt="The flyout with larger battery rings, the listening modes with Noise Cancellation selected, toggles for Conversation Awareness and One-Bud ANC, and the ear detection setting"> | <img src="docs/screenshots/collapsed.png" alt="The collapsed sidebar, where the AirPods card is a single ring showing the lowest battery"> |
+
+The card is lime while charging, as the case is here, and coral at 20% or below.
+
 - **Sidebar card:** a battery ring for the left pod, the right pod and the case, each with its icon inside and the
   percentage below. The card collapses to a single ring with the sidebar, shows lime while charging and coral at 20%
   or below, and hides itself when no AirPods are connected.
@@ -120,10 +128,11 @@ reloaded without a restart and logged no errors, and `pacman -Qkk pond-shell` th
 modified.
 
 The flyout and its controls were also tested by hand on the system install and work. Pausing when a pod is removed
-was checked on an earlier install of the same code that ran from a copy of the shell.
+was checked on an earlier install of the same code that ran from a copy of the shell. The case battery showed a real
+value (97%, charging) in the screenshots above, and the collapsed sidebar was checked by eye: the card shrinks to a
+single ring that shows the lowest battery. The ring has no icon inside yet.
 
-**Not tested:** the pacman hook firing on a real `pond-shell` upgrade, the collapsed (48px) sidebar, the case
-battery with the lid open, the other Pond themes (the ring colours were picked for a dark theme), any other AirPods
+**Not tested:** the pacman hook firing on a real `pond-shell` upgrade, the other Pond themes (the ring colours were picked for a dark theme), any other AirPods
 model, multiple monitors.
 
 The scripts were tested against temporary folders, including with a simulated `pond-shell` update, an update that
