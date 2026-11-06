@@ -119,11 +119,10 @@ Verified on that machine with the system install: `install-system.sh` added the 
 reloaded without a restart and logged no errors, and `pacman -Qkk pond-shell` then listed only `Sidebar.qml` as
 modified.
 
-Used and working there, on an earlier install of the same code that ran from a copy of the shell: the flyout,
-switching listening mode, the ear-detection setting, and pausing when a pod is removed.
+The flyout and its controls were also tested by hand on the system install and work. Pausing when a pod is removed
+was checked on an earlier install of the same code that ran from a copy of the shell.
 
-**Not tested:** the pacman hook firing on a real `pond-shell` upgrade, the flyout and controls since moving to the
-system install, the collapsed (48px) sidebar, the adaptive noise slider, Conversation Awareness, One-Bud ANC, the case
+**Not tested:** the pacman hook firing on a real `pond-shell` upgrade, the collapsed (48px) sidebar, the case
 battery with the lid open, the other Pond themes (the ring colours were picked for a dark theme), any other AirPods
 model, multiple monitors.
 
