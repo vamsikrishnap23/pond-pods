@@ -35,7 +35,8 @@ sudo pacman -S cmake ninja qt6-connectivity qt6-tools qt6-declarative pkgconf li
 sudo ./install-system.sh     # add the widget to the sidebar and install the pacman hook
 ```
 
-Then restart the shell, which the script prints the command for:
+The running shell normally reloads by itself when the files change, so the card appears without a restart. If it does
+not, restart the shell:
 
 ```
 pkill -f '^qs -c pond-shell'; setsid qs -c pond-shell -d >/dev/null 2>&1 &
@@ -114,13 +115,17 @@ icons. AirPods Max has no pods or case, so it uses Pond's headphone icon.
 
 Developed and used on one machine: Pond OS with niri, AirPods Pro 2, North theme.
 
-Used and working there: the sidebar card, the flyout, switching listening mode, the ear-detection setting, and
-pausing when a pod is removed.
+Verified on that machine with the system install: `install-system.sh` added the card to the running shell, which
+reloaded without a restart and logged no errors, and `pacman -Qkk pond-shell` then listed only `Sidebar.qml` as
+modified.
 
-**Not tested:** the system install (`install-system.sh`) on a real system and the pacman hook firing on a real
-`pond-shell` upgrade, the collapsed (48px) sidebar, the adaptive noise slider, Conversation Awareness, One-Bud ANC,
-the case battery with the lid open, the other Pond themes (the ring colours were picked for a dark theme), any other
-AirPods model, multiple monitors.
+Used and working there, on an earlier install of the same code that ran from a copy of the shell: the flyout,
+switching listening mode, the ear-detection setting, and pausing when a pod is removed.
+
+**Not tested:** the pacman hook firing on a real `pond-shell` upgrade, the flyout and controls since moving to the
+system install, the collapsed (48px) sidebar, the adaptive noise slider, Conversation Awareness, One-Bud ANC, the case
+battery with the lid open, the other Pond themes (the ring colours were picked for a dark theme), any other AirPods
+model, multiple monitors.
 
 The scripts were tested against temporary folders, including with a simulated `pond-shell` update, an update that
 conflicts with the patch, and under `fakeroot` for ownership.
