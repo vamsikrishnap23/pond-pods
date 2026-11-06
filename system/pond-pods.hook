@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = pond-shell
+
+[Action]
+Description = Adding the AirPods widget to pond-shell...
+When = PostTransaction
+Exec = /usr/local/lib/pond-pods/apply.sh

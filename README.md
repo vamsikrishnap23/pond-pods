@@ -27,57 +27,66 @@ BlueZ does not report battery for AirPods, so a small daemon talks to them direc
 
 ## Install
 
+Two steps. The first runs as you, the second needs root.
+
 ```
 sudo pacman -S cmake ninja qt6-connectivity qt6-tools qt6-declarative pkgconf libpulse
-./install.sh
+./install.sh                 # build and start the daemon (under ~/.local)
+sudo ./install-system.sh     # add the widget to the sidebar and install the pacman hook
 ```
 
-Then restart the shell (the script prints the command). `./install.sh --daemon-only` and `--shell-only` do one half.
+Then restart the shell, which the script prints the command for:
+
+```
+pkill -f '^qs -c pond-shell'; setsid qs -c pond-shell -d >/dev/null 2>&1 &
+```
 
 ### What it changes
 
-Nothing under `/usr` or `/etc`. The script:
+**As you (`install.sh`)**, all under `~/.local`: the daemon and `librepods-ctl` in `bin/`, a systemd user unit
+(enabled and started), and translations. The upstream tray app's launcher entry is removed, since the widget replaces it.
 
-1. Builds the daemon and installs it under `~/.local` (`bin/`, the systemd user unit, translations), enables the
-   `librepods` user service and starts it. It removes the upstream tray app's launcher entry, since the widget
-   replaces it.
-2. Copies the stock shell from `/usr/share/pond-interface/shell` to `~/.config/quickshell/pond-shell`, where
-   Quickshell prefers it over the system copy, applies [`patches/sidebar.patch`](patches/sidebar.patch) to its
-   `Sidebar.qml`, and adds the `airpods/` folder.
+**As root (`install-system.sh`)**:
 
-The patch is the only edit to a stock file. It adds 21 lines and rewrites 7 so the flyout opens and closes like the
-wifi, audio and bluetooth ones.
+1. Copies the tools to `/usr/local/lib/pond-pods/`, owned by root. The pacman hook runs them as root, so it must never
+   run a file from a folder a normal user can write to.
+2. Installs `/etc/pacman.d/hooks/pond-pods.hook`.
+3. Adds the widget to the system shell in `/usr/share/pond-interface/shell`: it copies `airpods/` in and applies
+   [`patches/sidebar.patch`](patches/sidebar.patch) to `Sidebar.qml`.
 
-Because the copy takes the place of the system shell, **`pond-shell` package updates do not reach it** while it is
-installed. See [Keeping up with Pond updates](#keeping-up-with-pond-updates).
+The patch is the only edit to a file the `pond-shell` package ships. It adds 21 lines and rewrites 7, so the flyout
+opens and closes like the wifi, audio and bluetooth ones.
 
-## Keeping up with Pond updates
+The package database is not touched, so `pacman -Qkk pond-shell` will list `Sidebar.qml` as modified while the patch
+is applied.
 
-`install.sh` records which `pond-shell` version the copy was made from. After Pond updates the package:
+## Updates
 
-```
-./update.sh --check     # is the stock shell different from my copy? (exit 0 up to date, 10 behind)
-./update.sh             # rebuild the copy: fresh stock files + patches/sidebar.patch + airpods/
-./update.sh --restart   # the same, and restart the shell
-```
+The widget is added to the real shell, not to a copy, so Pond updates reach you.
 
-The copy is rebuilt beside the old one and swapped in only when it is complete. The previous copy is kept as
-`pond-shell.old.<time>`, and the copy's own git history (if it has one) is carried over, so `git status` there shows
-what Pond changed. If Pond has changed the lines of `Sidebar.qml` that the patch edits, the patch no longer applies
-and `update.sh` stops without touching anything. `patches/sidebar.patch` then has to be updated first.
+An update restores the stock `Sidebar.qml`, which removes the patch. The pacman hook runs
+`/usr/local/lib/pond-pods/apply.sh` after every `pond-shell` install or upgrade and adds the widget again. You only
+need to restart the shell afterwards, the same as after any Pond update.
 
-The shell does not notice updates by itself, so run `./update.sh --check` after a `pond-shell` upgrade, or when the
-sidebar looks wrong after one.
+If Pond has changed the lines of `Sidebar.qml` that the patch edits, the patch no longer applies. `apply.sh` then
+changes nothing, says so, and the shell keeps working without the widget until `patches/sidebar.patch` is updated.
 
-## Restore the stock shell
+To add the widget by hand, for example after updating this repository:
 
 ```
-./uninstall.sh            # move the copy aside and restart the stock shell
-./uninstall.sh --daemon   # also stop and remove the daemon
+sudo ./install-system.sh
 ```
 
-The copy is renamed to `pond-shell.disabled.<time>`, not deleted. If the shell will not draw, switch to a TTY
-(Ctrl+Alt+F3), run the same script, and switch back.
+## Uninstall
+
+```
+sudo ./uninstall-system.sh   # undo the patch, delete airpods/, remove the hook and /usr/local/lib/pond-pods
+./uninstall.sh               # stop and remove the daemon
+```
+
+Restart the shell afterwards. If the patch cannot be undone cleanly, `uninstall-system.sh` stops before removing
+anything else, and `sudo pacman -S pond-shell` restores the stock files. If the shell will not draw, switch to a TTY
+(Ctrl+Alt+F3) and run one of those.
 
 ## How it works
 
@@ -108,8 +117,13 @@ Developed and used on one machine: Pond OS with niri, AirPods Pro 2, North theme
 Used and working there: the sidebar card, the flyout, switching listening mode, the ear-detection setting, and
 pausing when a pod is removed.
 
-**Not tested:** the collapsed (48px) sidebar, the adaptive noise slider, Conversation Awareness, One-Bud ANC, the
-case battery with the lid open, the other Pond themes (the ring colours were picked for a dark theme), any other AirPods model, multiple monitors.
+**Not tested:** the system install (`install-system.sh`) on a real system and the pacman hook firing on a real
+`pond-shell` upgrade, the collapsed (48px) sidebar, the adaptive noise slider, Conversation Awareness, One-Bud ANC,
+the case battery with the lid open, the other Pond themes (the ring colours were picked for a dark theme), any other
+AirPods model, multiple monitors.
+
+The scripts were tested against temporary folders, including with a simulated `pond-shell` update, an update that
+conflicts with the patch, and under `fakeroot` for ownership.
 
 ### Known issues
 
@@ -121,6 +135,8 @@ case battery with the lid open, the other Pond themes (the ring colours were pic
 - **The daemon picks the highest-bitrate Bluetooth profile** (SBC-XQ) and re-applies it on every activation, so the
   audio profile may differ from before.
 - **A model with no icon folder** makes Qt log a "Cannot open" warning before it falls back to the default icons.
+- **A patched system file.** Anything that checks `/usr` against the package, such as `pacman -Qkk`, will report
+  `Sidebar.qml`. A Pond-side extension point for sidebar cards would remove the need for the patch.
 
 ## Credits and licences
 
