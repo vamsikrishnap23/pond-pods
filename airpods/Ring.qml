@@ -25,7 +25,7 @@ Item {
     preferredRendererType: Shape.CurveRenderer
     ShapePath {
       strokeWidth: ring.stroke
-      strokeColor: Qt.rgba(1, 1, 1, 0.1)
+      strokeColor: Qt.alpha(Shell.Theme.colors.text, 0.1)
       fillColor: "transparent"
       PathAngleArc {
         centerX: ring.size / 2; centerY: ring.size / 2
