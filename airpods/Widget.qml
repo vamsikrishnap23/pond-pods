@@ -111,4 +111,8 @@ Shell.Card {
     charging: root.lowest ? root.lowest.info.charging : false
     showText: false
   }
+
+  AirPods.PopupCard {
+    id: popupCard
+  }
 }
