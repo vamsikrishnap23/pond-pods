@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import QtQuick.Effects
 import ".." as Shell
 import "Model.js" as Model
 
@@ -17,6 +18,7 @@ Item {
   readonly property real fraction: known ? Math.max(0, Math.min(100, level)) / 100 : 0
   readonly property color tint: charging ? "#CBE25B"
       : known && level <= 20 ? "#FB9B89" : Shell.Theme.colors.text
+  readonly property real gapAngle: charging ? 20 : 0
   width: size
   height: size
 
@@ -27,10 +29,12 @@ Item {
       strokeWidth: ring.stroke
       strokeColor: Qt.alpha(Shell.Theme.colors.text, 0.1)
       fillColor: "transparent"
+      capStyle: ring.charging ? ShapePath.RoundCap : ShapePath.FlatCap
       PathAngleArc {
         centerX: ring.size / 2; centerY: ring.size / 2
         radiusX: (ring.size - ring.stroke) / 2; radiusY: radiusX
-        startAngle: 0; sweepAngle: 360
+        startAngle: -90 + ring.gapAngle
+        sweepAngle: 360 - 2 * ring.gapAngle
       }
     }
     ShapePath {
@@ -41,10 +45,25 @@ Item {
       PathAngleArc {
         centerX: ring.size / 2; centerY: ring.size / 2
         radiusX: (ring.size - ring.stroke) / 2; radiusY: radiusX
-        startAngle: -90
-        sweepAngle: 359.9 * ring.fraction
+        startAngle: -90 + ring.gapAngle
+        sweepAngle: (360 - 2 * ring.gapAngle) * ring.fraction
       }
     }
+  }
+  Image {
+    id: bolt
+    visible: ring.charging
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.verticalCenter: parent.top
+    anchors.verticalCenterOffset: ring.stroke / 2
+    width: Math.max(4, Math.round(ring.size * 0.12))
+    height: width * 2
+    source: Qt.resolvedUrl("assets/bolt.svg")
+    sourceSize: Qt.size(width * 2, height * 2)
+    fillMode: Image.PreserveAspectFit
+    smooth: true
+    layer.enabled: true
+    layer.effect: MultiEffect { colorization: 1; colorizationColor: Shell.Theme.colors.text }
   }
   Text {
     anchors.centerIn: parent

@@ -5,7 +5,7 @@
 # binary itself, since that would pull in BlueZ/PulseAudio/Qt6::Widgets.
 # Each test file is a single tst_*.cpp with QTEST_GUILESS_MAIN.
 
-find_package(Qt6 REQUIRED COMPONENTS Test Core Bluetooth)
+find_package(Qt6 REQUIRED COMPONENTS Test Core Bluetooth DBus)
 
 # Centralized include path so tests can `#include "../eardetection.hpp"`
 # without each adding their own target_include_directories.
@@ -96,6 +96,7 @@ openpods_add_test(tst_notifier
     tst_notifier.cpp
     ../notifier.hpp
 )
+target_link_libraries(tst_notifier PRIVATE Qt6::DBus)
 
 # The exception to the no-binary rule above: librepods-ctl links none of BlueZ, PulseAudio or Widgets.
 openpods_add_test(tst_ctl

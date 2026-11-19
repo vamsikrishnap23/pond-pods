@@ -87,7 +87,7 @@ public:
         // Headless has no tray to take the fallback, so say so rather than dropping the toast silently.
         if (headless) {
             connect(m_notifier, &Notifier::fallbackRequested, this, [](const QString &title, const QString &message) {
-                LOG_WARN("omarchy is not on PATH, so this notification went nowhere: " << title << " " << message);
+                LOG_WARN("Notification service is unavailable, so this notification went nowhere: " << title << " " << message);
             });
         }
 
@@ -422,9 +422,12 @@ public slots:
         {
             const auto fire = s.latch->evaluate(s.level, s.available, s.charging);
             if (fire) {
+                const QString header = m_lastAirPodsName.isEmpty()
+                    ? tr("%1 Pod").arg(QString::fromLatin1(s.label))
+                    : tr("%1 · %2 Pod").arg(m_lastAirPodsName, QString::fromLatin1(s.label));
                 m_notifier->notify(
-                    tr("%1 AirPod Low Battery").arg(QString::fromLatin1(s.label)),
-                    tr("%1% remaining").arg(*fire));
+                    header,
+                    tr("%1% — Battery Low").arg(*fire));
             }
         }
     }
@@ -868,8 +871,8 @@ private slots:
         // the lid. Tray icon still resets so visual state is accurate.
         if (!m_isSuspending) {
             m_notifier->notify(
-                tr("AirPods Disconnected"),
-                tr("Your AirPods have been disconnected"));
+                m_lastAirPodsName.isEmpty() ? tr("AirPods") : m_lastAirPodsName,
+                tr("Disconnected"));
         }
         if (trayManager) {
             trayManager->resetTrayIcon();

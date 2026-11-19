@@ -10,8 +10,8 @@ class TestNotifier : public QObject
 {
     Q_OBJECT
 
-    // notification, send, --app-name, AirPods, -g, the glyph, title, message.
-    static constexpr int kExpectedArgCount = 8;
+    // -a, AirPods, -i, audio-headphones, title, message.
+    static constexpr int kExpectedArgCount = 6;
 
 private slots:
     void init()
@@ -22,9 +22,9 @@ private slots:
         qputenv("PATH", m_dir->path().toLocal8Bit());
     }
 
-    void omarchyOnPath_isSpawnedWithTheArguments()
+    void notifySendOnPath_isSpawnedWithTheArguments()
     {
-        writeFakeOmarchy();
+        writeFakeNotifySend();
         Notifier notifier;
         QSignalSpy fallback(&notifier, &Notifier::fallbackRequested);
 
@@ -33,17 +33,17 @@ private slots:
         // The stub's redirect creates the file before printf fills it, so wait on the content.
         QTRY_VERIFY_WITH_TIMEOUT(readArgs().size() == kExpectedArgCount, 3000);
         const QStringList args = readArgs();
-        QCOMPARE(args.value(0), QStringLiteral("notification"));
-        QCOMPARE(args.value(1), QStringLiteral("send"));
-        QCOMPARE(args.value(2), QStringLiteral("--app-name"));
-        QCOMPARE(args.value(3), QStringLiteral("AirPods"));
-        QCOMPARE(args.value(6), QStringLiteral("Left AirPod Low Battery"));
-        QCOMPARE(args.value(7), QStringLiteral("10% remaining"));
-        // The tray fallback is for when omarchy is absent, so spawning it must not also fire.
+        QCOMPARE(args.value(0), QStringLiteral("-a"));
+        QCOMPARE(args.value(1), QStringLiteral("AirPods"));
+        QCOMPARE(args.value(2), QStringLiteral("-i"));
+        QCOMPARE(args.value(3), Notifier::resolveIcon());
+        QCOMPARE(args.value(4), QStringLiteral("Left AirPod Low Battery"));
+        QCOMPARE(args.value(5), QStringLiteral("10% remaining"));
+        // The tray fallback is for when notify-send is absent, so spawning it must not also fire.
         QCOMPARE(fallback.count(), 0);
     }
 
-    void omarchyMissing_asksForTheTrayFallback()
+    void notifySendMissing_asksForTheTrayFallback()
     {
         Notifier notifier;
         QSignalSpy fallback(&notifier, &Notifier::fallbackRequested);
@@ -57,7 +57,7 @@ private slots:
 
     void disabled_doesNeither()
     {
-        writeFakeOmarchy();
+        writeFakeNotifySend();
         Notifier notifier;
         notifier.setEnabled(false);
         QSignalSpy fallback(&notifier, &Notifier::fallbackRequested);
@@ -89,9 +89,9 @@ private slots:
     }
 
 private:
-    void writeFakeOmarchy()
+    void writeFakeNotifySend()
     {
-        const QString path = m_dir->path() + QStringLiteral("/omarchy");
+        const QString path = m_dir->path() + QStringLiteral("/notify-send");
         QFile f(path);
         QVERIFY(f.open(QIODevice::WriteOnly));
         f.write("#!/bin/sh\nprintf '%s\\n' \"$@\" > \"" + m_argsFile.toLocal8Bit() + "\"\n");

@@ -105,6 +105,17 @@ install(FILES assets/me.kavishdevar.librepods.desktop
     DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
 install(FILES assets/librepods.svg
     DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps")
+install(FILES assets/airpods_straight.png
+    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons"
+    RENAME airpods.png)
+install(FILES assets/airpods_straight.png
+    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps"
+    RENAME airpods.png)
+foreach(SIZE 512x512 256x256 128x128 64x64 48x48 32x32)
+    install(FILES assets/airpods_straight.png
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}/apps"
+        RENAME airpods.png)
+endforeach()
 # With the documented --prefix ~/.local this lands in ~/.local/share/systemd/user, which systemd searches.
 install(FILES librepods.service
     DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/systemd/user")

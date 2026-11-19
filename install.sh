@@ -22,6 +22,8 @@ fi
 cmake -S "$root/daemon" -B "$root/daemon/build" -G Ninja -DBUILD_TESTING=OFF
 cmake --build "$root/daemon/build"
 cmake --install "$root/daemon/build" --prefix "$HOME/.local"
+# Update icon cache so shells and desktop environments immediately recognize new icons.
+gtk-update-icon-cache -q -t -f "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
 # The widget replaces the upstream tray app, so keep its launcher entry out of the menu.
 rm -f "$HOME/.local/share/applications/me.kavishdevar.librepods.desktop"
 systemctl --user daemon-reload
