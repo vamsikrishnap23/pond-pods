@@ -323,25 +323,27 @@ PanelWindow {
         property real imgW: 70
         property real imgH: 90
 
-        width: parent
-            ? parent.width / (root.service.isHeadset ? 1 : 3)
-            : 0
+        property real colWidth: 0
+
+        width: colWidth > 0
+            ? colWidth
+            : (parent ? parent.width / (root.service.isHeadset ? 1 : 3) : 0)
 
         spacing: 0
 
         // Fixed image container
         Item {
             width: parent.width
-            height: 116
+            height: 122
 
             Image {
                 anchors.centerIn: parent
 
                 anchors.horizontalCenterOffset:
                     bc.part === "Left"
-                        ? 10
+                        ? 6
                         : bc.part === "Right"
-                            ? -10
+                            ? -6
                             : 0
 
                 source: bc.imgSource
@@ -565,7 +567,7 @@ PanelWindow {
 
                 Item {
                     width: 1
-                    height: 16
+                    height: 12
                 }
 
                 Row {
@@ -575,6 +577,7 @@ PanelWindow {
                         visible: !root.service.isHeadset
 
                         part: "Left"
+                        colWidth: 82
 
                         level: root.testMode
                             ? 97
@@ -587,14 +590,15 @@ PanelWindow {
                         imgSource:
                             Qt.resolvedUrl("assets/images/pod-left.png")
 
-                        imgW: 82
-                        imgH: 106
+                        imgW: 80
+                        imgH: 104
                     }
 
                     BatteryCol {
                         visible: !root.service.isHeadset
 
                         part: "Right"
+                        colWidth: 82
 
                         level: root.testMode
                             ? 98
@@ -607,14 +611,15 @@ PanelWindow {
                         imgSource:
                             Qt.resolvedUrl("assets/images/pod-right.png")
 
-                        imgW: 82
-                        imgH: 106
+                        imgW: 80
+                        imgH: 104
                     }
 
                     BatteryCol {
                         visible: !root.service.isHeadset
 
                         part: "Case"
+                        colWidth: 156
 
                         level: root.testMode
                             ? 88
@@ -627,8 +632,8 @@ PanelWindow {
                         imgSource:
                             Qt.resolvedUrl("assets/images/case.png")
 
-                        imgW: 120
-                        imgH: 112
+                        imgW: 144
+                        imgH: 140
                     }
 
                     BatteryCol {
