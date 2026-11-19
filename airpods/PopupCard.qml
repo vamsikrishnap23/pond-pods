@@ -1,5 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Shapes
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import "." as AirPods
@@ -8,9 +10,9 @@ import "Model.js" as Model
 
 // Connection popup — layout from iOS (IMG_8017) rendered in Pond design language.
 //   • Title: two-line bold name split on the possessive ("Vamsi's" / "AirPods Pro")
-//   • Middle: images of each part (pod-left + pod-right share one column, case gets one column)
-//   • Bottom: Ring per part beneath each image, with levelText label
-//   • Pond surface, shadow, blur, font, close button — no hardcoded colours
+//   • Middle: images of each part (left pod, right pod, case — one column each)
+//   • Bottom: clean battery ring per column (no icons inside) + percentage label
+//   • Pond surface, shadow, blur, font, PanelCloseButton inside the card top-right
 PanelWindow {
   id: root
 
@@ -28,16 +30,13 @@ PanelWindow {
     return m ? { subtitle: m[1], title: m[2] } : { subtitle: "", title: raw };
   }
 
-  // Card width: wider than the standard flyout to hold image + ring columns side by side.
   readonly property int cardW: 360
-  // Extra right clearance so the PanelCloseButton (40×40, overhangs 20px outside card right) is clickable.
-  readonly property int windowW: cardW + 50
 
   // ── Window setup ─────────────────────────────────────────────────────────
   screen: Quickshell.screens && Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
   color: "transparent"
-  implicitWidth: windowW
-  implicitHeight: card.implicitHeight + 22    // card sits at y:22, same as Panel.qml
+  implicitWidth: cardW
+  implicitHeight: card.implicitHeight
   visible: showing || closeCleanup.running
   anchors { bottom: true }
   margins.bottom: 32
@@ -46,12 +45,12 @@ PanelWindow {
   WlrLayershell.namespace: "pond-airpods-popup"
   WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
-  mask: Region { item: outer }
+  mask: Region { item: card; radius: Shell.PanelStyle.radius }
 
   BackgroundEffect.blurRegion: Shell.Theme.translucent ? blurReg : null
   Region {
     id: blurReg
-    item: root.showing && outer.opacity > Shell.PanelStyle.blurRevealOpacity ? card : null
+    item: root.showing && card.opacity > Shell.PanelStyle.blurRevealOpacity ? card : null
     radius: Shell.PanelStyle.radius
   }
 
@@ -71,13 +70,79 @@ PanelWindow {
   function open()     { closeCleanup.stop(); dismissTimer.stop(); showing = true;  dismissTimer.start(); }
   function closeAll() { if (!showing) return; showing = false; dismissTimer.stop(); closeCleanup.restart(); }
 
-  // ── Animation container — same open/close motion as Panel.qml ────────────
-  Item {
-    id: outer
-    anchors.bottom: parent.bottom
-    anchors.horizontalCenter: parent.horizontalCenter
-    width: root.windowW
-    height: card.implicitHeight + 22
+  // ── Custom battery ring — clean arc, no pod icon, charging bolt only ──────
+  component BatteryRing: Item {
+    id: ringRoot
+    property int level: Model.LEVEL_UNKNOWN
+    property bool charging: false
+    readonly property bool known: level !== Model.LEVEL_UNKNOWN
+    readonly property real fraction: known ? Math.max(0, Math.min(100, level)) / 100 : 0
+    readonly property color arcColor: charging ? "#CBE25B"
+        : known && level <= 20 ? "#FB9B89"
+        : Shell.Theme.colors.text
+
+    width: 56; height: 56
+
+    Shape {
+      anchors.fill: parent
+      preferredRendererType: Shape.CurveRenderer
+      // Track ring (dim)
+      ShapePath {
+        strokeWidth: 5
+        strokeColor: Qt.alpha(Shell.Theme.colors.text, 0.1)
+        fillColor: "transparent"
+        capStyle: ShapePath.FlatCap
+        PathAngleArc {
+          centerX: 28; centerY: 28
+          radiusX: 25.5; radiusY: 25.5
+          startAngle: -90; sweepAngle: 360
+        }
+      }
+      // Fill arc
+      ShapePath {
+        strokeWidth: 5
+        strokeColor: ringRoot.arcColor
+        fillColor: "transparent"
+        capStyle: ShapePath.RoundCap
+        PathAngleArc {
+          centerX: 28; centerY: 28
+          radiusX: 25.5; radiusY: 25.5
+          startAngle: -90
+          sweepAngle: 360 * ringRoot.fraction
+          Behavior on sweepAngle { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+        }
+      }
+    }
+
+    // Charging bolt — centred inside the ring
+    Image {
+      visible: ringRoot.charging
+      anchors.centerIn: parent
+      source: Qt.resolvedUrl("assets/bolt.svg")
+      width: 9; height: 15
+      sourceSize: Qt.size(18, 30)
+      fillMode: Image.PreserveAspectFit
+      smooth: true
+      layer.enabled: true
+      layer.effect: MultiEffect { colorization: 1; colorizationColor: ringRoot.arcColor }
+    }
+  }
+
+  // ── Card ──────────────────────────────────────────────────────────────────
+  Shell.Shadow {
+    anchors.fill: card
+    cornerRadius: Shell.PanelStyle.radius
+    shadows: Shell.PanelStyle.frontShadows
+    opacity: root.showing ? 1 : 0
+  }
+
+  Shell.PanelBackground {
+    id: card
+    width: root.cardW
+    implicitHeight: contentCol.implicitHeight + 44
+    height: implicitHeight
+    Accessible.role: Accessible.Pane
+    Accessible.name: "AirPods"
 
     opacity: root.showing ? 1 : 0
     scale:   root.showing ? 1 : 0.9
@@ -98,251 +163,215 @@ PanelWindow {
       }
     }
 
-    Shell.Shadow {
-      anchors.fill: card
-      cornerRadius: Shell.PanelStyle.radius
-      shadows: Shell.PanelStyle.frontShadows
+    MouseArea {
+      anchors.fill: parent
+      acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+      hoverEnabled: true
+      onEntered: dismissTimer.stop()
+      onExited:  if (root.showing) dismissTimer.restart()
     }
 
-    // ── Card ─────────────────────────────────────────────────────────────────
-    Shell.PanelBackground {
-      id: card
-      y: 22
-      width: root.cardW
-      implicitHeight: contentCol.implicitHeight + 44
-      height: implicitHeight
-      Accessible.role: Accessible.Pane
-      Accessible.name: "AirPods"
-
-      MouseArea {
-        anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-        hoverEnabled: true
-        onEntered: dismissTimer.stop()
-        onExited:  if (root.showing) dismissTimer.restart()
-      }
-
-      // ── Content ───────────────────────────────────────────────────────────
-      Column {
-        id: contentCol
-        anchors {
-          top: parent.top; topMargin: 24
-          left: parent.left; leftMargin: 20
-          right: parent.right; rightMargin: 20
-        }
-        spacing: 0
-
-        // ── Two-line title (iOS style: subtitle smaller, title bold+large) ──
-        Text {
-          width: parent.width
-          horizontalAlignment: Text.AlignHCenter
-          visible: root.nameParts.subtitle !== ""
-          text: root.nameParts.subtitle
-          color: Qt.alpha(Shell.Theme.colors.text, 0.55)
-          font.family: Shell.Theme.fontFamily
-          font.pixelSize: 17
-          font.weight: Font.Medium
-          textFormat: Text.PlainText
-        }
-
-        Text {
-          width: parent.width
-          topPadding: root.nameParts.subtitle !== "" ? 2 : 0
-          horizontalAlignment: Text.AlignHCenter
-          text: root.nameParts.title
-          color: Shell.Theme.colors.text
-          font.family: Shell.Theme.fontFamily
-          font.pixelSize: 26
-          font.weight: Font.Bold
-          textFormat: Text.PlainText
-          elide: Text.ElideRight
-        }
-
-        // ── Spacer ────────────────────────────────────────────────────────
-        Item { width: 1; height: 20 }
-
-        // ── Image + Ring columns ──────────────────────────────────────────
-        // Three-column layout matching 8017:
-        //   col 0 = Left pod image + ring + label
-        //   col 1 = Right pod image + ring + label
-        //   col 2 = Case image (taller) + ring + label
-        //
-        // For headsets: single centred column with airpods.png
-        Row {
-          width: parent.width
-          height: implicitHeight
-
-          // ── Left pod column ───────────────────────────────────────────────
-          Column {
-            visible: !root.service.isHeadset
-            width: parent.width / 3
-            spacing: 8
-
-            Item {
-              width: parent.width; height: 110
-              Image {
-                anchors.centerIn: parent
-                source: Qt.resolvedUrl("assets/images/pod-left.png")
-                width: 70; height: 90
-                fillMode: Image.PreserveAspectFit
-                smooth: true; mipmap: true
-              }
-            }
-
-            AirPods.Ring {
-              anchors.horizontalCenter: parent.horizontalCenter
-              size: 56; stroke: 5; iconScale: 0.52
-              level: root.service.leftPod.level
-              charging: root.service.leftPod.charging
-              showText: false
-              part: "Left"
-            }
-
-            Text {
-              width: parent.width
-              horizontalAlignment: Text.AlignHCenter
-              text: Model.levelText(root.service.leftPod.level)
-              color: Shell.Theme.colors.text
-              font.family: Shell.Theme.fontFamily
-              font.weight: Font.Medium
-              font.pixelSize: 13
-              textFormat: Text.PlainText
-            }
-
-            Item { width: 1; height: 4 }
-          }
-
-          // ── Right pod column ──────────────────────────────────────────────
-          Column {
-            visible: !root.service.isHeadset
-            width: parent.width / 3
-            spacing: 8
-
-            Item {
-              width: parent.width; height: 110
-              Image {
-                anchors.centerIn: parent
-                source: Qt.resolvedUrl("assets/images/pod-right.png")
-                width: 70; height: 90
-                fillMode: Image.PreserveAspectFit
-                smooth: true; mipmap: true
-              }
-            }
-
-            AirPods.Ring {
-              anchors.horizontalCenter: parent.horizontalCenter
-              size: 56; stroke: 5; iconScale: 0.52
-              level: root.service.rightPod.level
-              charging: root.service.rightPod.charging
-              showText: false
-              part: "Right"
-            }
-
-            Text {
-              width: parent.width
-              horizontalAlignment: Text.AlignHCenter
-              text: Model.levelText(root.service.rightPod.level)
-              color: Shell.Theme.colors.text
-              font.family: Shell.Theme.fontFamily
-              font.weight: Font.Medium
-              font.pixelSize: 13
-              textFormat: Text.PlainText
-            }
-
-            Item { width: 1; height: 4 }
-          }
-
-          // ── Case column ───────────────────────────────────────────────────
-          Column {
-            visible: !root.service.isHeadset
-            width: parent.width / 3
-            spacing: 8
-
-            Item {
-              width: parent.width; height: 110
-              Image {
-                anchors.centerIn: parent
-                source: Qt.resolvedUrl("assets/images/case.png")
-                width: 100; height: 90
-                fillMode: Image.PreserveAspectFit
-                smooth: true; mipmap: true
-              }
-            }
-
-            AirPods.Ring {
-              anchors.horizontalCenter: parent.horizontalCenter
-              size: 56; stroke: 5; iconScale: 0.52
-              level: root.service.caseBattery.level
-              charging: root.service.caseBattery.charging
-              showText: false
-              part: "Case"
-            }
-
-            Text {
-              width: parent.width
-              horizontalAlignment: Text.AlignHCenter
-              text: Model.levelText(root.service.caseBattery.level)
-              color: Shell.Theme.colors.text
-              font.family: Shell.Theme.fontFamily
-              font.weight: Font.Medium
-              font.pixelSize: 13
-              textFormat: Text.PlainText
-            }
-
-            Item { width: 1; height: 4 }
-          }
-
-          // ── Headset: single centred column ────────────────────────────────
-          Column {
-            visible: root.service.isHeadset
-            width: parent.width
-            spacing: 8
-
-            Item {
-              width: parent.width; height: 110
-              Image {
-                anchors.centerIn: parent
-                source: Qt.resolvedUrl("assets/images/airpods.png")
-                width: 180; height: 100
-                fillMode: Image.PreserveAspectFit
-                smooth: true; mipmap: true
-              }
-            }
-
-            AirPods.Ring {
-              anchors.horizontalCenter: parent.horizontalCenter
-              size: 56; stroke: 5; iconScale: 0.52
-              level: root.service.headsetBattery.level
-              charging: root.service.headsetBattery.charging
-              showText: false
-              part: "Battery"
-            }
-
-            Text {
-              width: parent.width
-              horizontalAlignment: Text.AlignHCenter
-              text: Model.levelText(root.service.headsetBattery.level)
-              color: Shell.Theme.colors.text
-              font.family: Shell.Theme.fontFamily
-              font.weight: Font.Medium
-              font.pixelSize: 13
-              textFormat: Text.PlainText
-            }
-
-            Item { width: 1; height: 4 }
-          }
-        }
-      }
-    }
-
-    // ── Close button — Pond PanelCloseButton, top-right of card ──────────
-    // Position: right edge of card minus 20px (button is 40×40, overhangs 20px outside)
-    // y: 2 puts it 2px above the card top (y:22) — same convention as Panel.qml
+    // ── Close button — inside the card, top-right corner ─────────────────
     Shell.PanelCloseButton {
-      x: card.width - 20
-      y: 2
+      anchors.top: parent.top
+      anchors.topMargin: 12
+      anchors.right: parent.right
+      anchors.rightMargin: 12
+      z: 10
       enabled: root.showing
       onClicked: root.closeAll()
+    }
+
+    // ── Content ───────────────────────────────────────────────────────────
+    Column {
+      id: contentCol
+      anchors {
+        top: parent.top; topMargin: 24
+        left: parent.left; leftMargin: 20
+        right: parent.right; rightMargin: 20
+      }
+      spacing: 0
+
+      // ── Two-line title ─────────────────────────────────────────────────
+      Text {
+        width: parent.width
+        horizontalAlignment: Text.AlignHCenter
+        visible: root.nameParts.subtitle !== ""
+        text: root.nameParts.subtitle
+        color: Qt.alpha(Shell.Theme.colors.text, 0.55)
+        font.family: Shell.Theme.fontFamily
+        font.pixelSize: 15
+        font.weight: Font.Medium
+        textFormat: Text.PlainText
+      }
+
+      Text {
+        width: parent.width
+        topPadding: root.nameParts.subtitle !== "" ? 2 : 0
+        horizontalAlignment: Text.AlignHCenter
+        text: root.nameParts.title
+        color: Shell.Theme.colors.text
+        font.family: Shell.Theme.fontFamily
+        font.pixelSize: 26
+        font.weight: Font.Bold
+        textFormat: Text.PlainText
+        elide: Text.ElideRight
+      }
+
+      Item { width: 1; height: 20 }
+
+      // ── Three-column layout: image on top, ring below, label at bottom ──
+      Row {
+        width: parent.width
+
+        // Left pod
+        Column {
+          visible: !root.service.isHeadset
+          width: parent.width / 3
+          spacing: 10
+
+          Item {
+            width: parent.width; height: 100
+            Image {
+              anchors.centerIn: parent
+              source: Qt.resolvedUrl("assets/images/pod-left.png")
+              width: 68; height: 90
+              fillMode: Image.PreserveAspectFit
+              smooth: true; mipmap: true
+            }
+          }
+
+          BatteryRing {
+            anchors.horizontalCenter: parent.horizontalCenter
+            level: root.service.leftPod.level
+            charging: root.service.leftPod.charging
+          }
+
+          Text {
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            text: Model.levelText(root.service.leftPod.level)
+            color: Shell.Theme.colors.text
+            font.family: Shell.Theme.fontFamily
+            font.weight: Font.Medium
+            font.pixelSize: 13
+            textFormat: Text.PlainText
+          }
+
+          Item { width: 1; height: 8 }
+        }
+
+        // Right pod
+        Column {
+          visible: !root.service.isHeadset
+          width: parent.width / 3
+          spacing: 10
+
+          Item {
+            width: parent.width; height: 100
+            Image {
+              anchors.centerIn: parent
+              source: Qt.resolvedUrl("assets/images/pod-right.png")
+              width: 68; height: 90
+              fillMode: Image.PreserveAspectFit
+              smooth: true; mipmap: true
+            }
+          }
+
+          BatteryRing {
+            anchors.horizontalCenter: parent.horizontalCenter
+            level: root.service.rightPod.level
+            charging: root.service.rightPod.charging
+          }
+
+          Text {
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            text: Model.levelText(root.service.rightPod.level)
+            color: Shell.Theme.colors.text
+            font.family: Shell.Theme.fontFamily
+            font.weight: Font.Medium
+            font.pixelSize: 13
+            textFormat: Text.PlainText
+          }
+
+          Item { width: 1; height: 8 }
+        }
+
+        // Case
+        Column {
+          visible: !root.service.isHeadset
+          width: parent.width / 3
+          spacing: 10
+
+          Item {
+            width: parent.width; height: 100
+            Image {
+              anchors.centerIn: parent
+              source: Qt.resolvedUrl("assets/images/case.png")
+              width: 96; height: 90
+              fillMode: Image.PreserveAspectFit
+              smooth: true; mipmap: true
+            }
+          }
+
+          BatteryRing {
+            anchors.horizontalCenter: parent.horizontalCenter
+            level: root.service.caseBattery.level
+            charging: root.service.caseBattery.charging
+          }
+
+          Text {
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            text: Model.levelText(root.service.caseBattery.level)
+            color: Shell.Theme.colors.text
+            font.family: Shell.Theme.fontFamily
+            font.weight: Font.Medium
+            font.pixelSize: 13
+            textFormat: Text.PlainText
+          }
+
+          Item { width: 1; height: 8 }
+        }
+
+        // Headset: single centred column
+        Column {
+          visible: root.service.isHeadset
+          width: parent.width
+          spacing: 10
+
+          Item {
+            width: parent.width; height: 100
+            Image {
+              anchors.centerIn: parent
+              source: Qt.resolvedUrl("assets/images/airpods.png")
+              width: 180; height: 90
+              fillMode: Image.PreserveAspectFit
+              smooth: true; mipmap: true
+            }
+          }
+
+          BatteryRing {
+            anchors.horizontalCenter: parent.horizontalCenter
+            level: root.service.headsetBattery.level
+            charging: root.service.headsetBattery.charging
+          }
+
+          Text {
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            text: Model.levelText(root.service.headsetBattery.level)
+            color: Shell.Theme.colors.text
+            font.family: Shell.Theme.fontFamily
+            font.weight: Font.Medium
+            font.pixelSize: 13
+            textFormat: Text.PlainText
+          }
+
+          Item { width: 1; height: 8 }
+        }
+      }
     }
   }
 }
