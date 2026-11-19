@@ -87,7 +87,7 @@ Item {
         width: parent.width
         height: 28
         verticalAlignment: Text.AlignVCenter
-        text: root.service.modelName || root.service.deviceName || "AirPods"
+        text: root.service.deviceName || root.service.modelName || "AirPods"
         textFormat: Text.PlainText
         elide: Text.ElideRight
         color: Shell.Theme.colors.text
@@ -99,7 +99,7 @@ Item {
       // Battery.
       Row {
         width: parent.width
-        height: 84
+        height: 94
         Repeater {
           model: root.service.isHeadset
               ? [{ name: "Battery", info: root.service.headsetBattery }]
@@ -110,19 +110,20 @@ Item {
             id: cell
             required property var modelData
             width: content.width / (root.service.isHeadset ? 1 : 3)
-            height: 84
+            height: 94
             AirPods.Ring {
               anchors.horizontalCenter: parent.horizontalCenter
-              y: 6
-              size: 52
-              stroke: 5
+              y: 4
+              size: 60
+              stroke: 5.5
+              iconScale: 0.54
               level: cell.modelData.info.level
               charging: cell.modelData.info.charging
               showText: false
               part: cell.modelData.name
             }
             Text {
-              y: 62
+              y: 70
               width: parent.width
               horizontalAlignment: Text.AlignHCenter
               text: Model.levelText(cell.modelData.info.level)

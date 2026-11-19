@@ -14,11 +14,11 @@ Item {
   // Names a part of the AirPods to draw as an icon in the centre, instead of the percentage.
   property string part: ""
   property real stroke: 4
+  property real iconScale: 0.48
   readonly property bool known: level !== Model.LEVEL_UNKNOWN
   readonly property real fraction: known ? Math.max(0, Math.min(100, level)) / 100 : 0
   readonly property color tint: charging ? "#CBE25B"
       : known && level <= 20 ? "#FB9B89" : Shell.Theme.colors.text
-  readonly property real gapAngle: charging ? 20 : 0
   width: size
   height: size
 
@@ -29,12 +29,12 @@ Item {
       strokeWidth: ring.stroke
       strokeColor: Qt.alpha(Shell.Theme.colors.text, 0.1)
       fillColor: "transparent"
-      capStyle: ring.charging ? ShapePath.RoundCap : ShapePath.FlatCap
+      capStyle: ShapePath.FlatCap
       PathAngleArc {
         centerX: ring.size / 2; centerY: ring.size / 2
         radiusX: (ring.size - ring.stroke) / 2; radiusY: radiusX
-        startAngle: -90 + ring.gapAngle
-        sweepAngle: 360 - 2 * ring.gapAngle
+        startAngle: -90
+        sweepAngle: 360
       }
     }
     ShapePath {
@@ -45,8 +45,8 @@ Item {
       PathAngleArc {
         centerX: ring.size / 2; centerY: ring.size / 2
         radiusX: (ring.size - ring.stroke) / 2; radiusY: radiusX
-        startAngle: -90 + ring.gapAngle
-        sweepAngle: (360 - 2 * ring.gapAngle) * ring.fraction
+        startAngle: -90
+        sweepAngle: 360 * ring.fraction
       }
     }
   }
@@ -56,14 +56,12 @@ Item {
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.verticalCenter: parent.top
     anchors.verticalCenterOffset: ring.stroke / 2
-    width: Math.max(4, Math.round(ring.size * 0.12))
-    height: width * 2
+    width: Math.max(6, Math.round(ring.size * 0.16))
+    height: Math.round(width * (12.4 / 7.4))
     source: Qt.resolvedUrl("assets/bolt.svg")
     sourceSize: Qt.size(width * 2, height * 2)
     fillMode: Image.PreserveAspectFit
     smooth: true
-    layer.enabled: true
-    layer.effect: MultiEffect { colorization: 1; colorizationColor: Shell.Theme.colors.text }
   }
   Text {
     anchors.centerIn: parent
@@ -77,7 +75,7 @@ Item {
   PartIcon {
     anchors.centerIn: parent
     visible: ring.part !== ""
-    width: Math.round(ring.size * 0.44)
+    width: Math.round(ring.size * ring.iconScale)
     height: width
     part: ring.part === "" ? "Case" : ring.part
     tint: Shell.Theme.colors.text
