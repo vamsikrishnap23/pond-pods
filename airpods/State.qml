@@ -211,6 +211,18 @@ Singleton {
     onLoadFailed: root.stateGone()
   }
 
+  signal requestPopup(bool test)
+  signal requestClose()
+  signal requestToggle()
+
+  IpcHandler {
+    target: "airpods-popup"
+    function show(): void { root.requestPopup(false); }
+    function test(): void { root.requestPopup(true); }
+    function hide(): void { root.requestClose(); }
+    function toggle(): void { root.requestToggle(); }
+  }
+
   Process {
     id: commandProcess
     running: false

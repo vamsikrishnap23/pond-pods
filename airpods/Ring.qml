@@ -57,7 +57,7 @@ Item {
     anchors.verticalCenter: parent.top
     anchors.verticalCenterOffset: ring.stroke / 2
     width: Math.max(6, Math.round(ring.size * 0.16))
-    height: Math.round(width * (12.4 / 7.4))
+    height: Math.round(width * 2)
     source: Qt.resolvedUrl("assets/bolt.svg")
     sourceSize: Qt.size(width * 2, height * 2)
     fillMode: Image.PreserveAspectFit
