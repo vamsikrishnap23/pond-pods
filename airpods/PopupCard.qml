@@ -108,7 +108,7 @@ PanelWindow {
             root.testMode = test;
 
             if (test)
-                root.displayedName = "Vamsi's AirPods Pro";
+                root.displayedName = "AirPods Pro";
 
             root.persistent = true;
             root.open();
@@ -159,7 +159,7 @@ PanelWindow {
         onTriggered: {
             root.nameWaitTicks++;
 
-            if ((root.service.deviceName
+            if ((root.service.modelName
                     && root.nameWaitTicks >= 2)
                     || root.nameWaitTicks >= 8) {
                 stop();
@@ -185,8 +185,7 @@ PanelWindow {
         dismissTimer.stop();
 
         if (!testMode) {
-            displayedName = service.deviceName
-                || service.modelName
+            displayedName = service.modelName
                 || "AirPods";
         }
 
@@ -544,7 +543,7 @@ PanelWindow {
 
                     Text {
                         anchors.top: parent.top
-                        anchors.topMargin: 20
+                        anchors.topMargin: root.nameParts.subtitle !== "" ? 20 : 10
 
                         width: parent.width
                         height: 38

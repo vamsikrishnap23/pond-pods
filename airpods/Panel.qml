@@ -87,7 +87,7 @@ Item {
         width: parent.width
         height: 28
         verticalAlignment: Text.AlignVCenter
-        text: root.service.deviceName || root.service.modelName || "AirPods"
+        text: root.service.modelName || "AirPods"
         textFormat: Text.PlainText
         elide: Text.ElideRight
         color: Shell.Theme.colors.text
